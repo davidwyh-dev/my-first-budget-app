@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -12,6 +13,7 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   const { signIn } = useAuthActions();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -33,6 +35,9 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
       }
       
       await signIn('password', formData);
+      
+      // Redirect to dashboard after successful sign-in
+      navigate('/app');
     } catch (err: unknown) {
       console.error('Auth error:', err);
       
