@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import AuthForm from '../components/auth/AuthForm';
@@ -7,8 +7,17 @@ import Button from '../components/ui/Button';
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialMode = searchParams.get('mode') === 'signin' ? 'signin' : 'signup';
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+
+  // Sync mode with URL parameter
+  useEffect(() => {
+    const urlMode = searchParams.get('mode');
+    if (urlMode === 'signin') {
+      setMode('signin');
+    } else if (urlMode === 'signup') {
+      setMode('signup');
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
