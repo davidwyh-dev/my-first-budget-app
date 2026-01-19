@@ -33,8 +33,29 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
       }
       
       await signIn('password', formData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+    } catch (err: unknown) {
+      console.error('Auth error:', err);
+      
+      // Handle specific error cases
+      if (err instanceof Error) {
+        const errorMessage = err.message.toLowerCase();
+        
+        if (errorMessage.includes('invalidsecret')) {
+          if (mode === 'signin') {
+            setError('Invalid email or password. Please check your credentials and try again.');
+          } else {
+            setError('An error occurred during sign up. Please try again.');
+          }
+        } else if (errorMessage.includes('account already exists')) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else {
+          setError(err.message);
+        }
+      } else if (typeof err === 'object' && err !== null && 'message' in err) {
+        setError(String((err as { message: unknown }).message));
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
