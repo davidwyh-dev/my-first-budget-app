@@ -50,10 +50,10 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="font-heading text-2xl font-bold text-accent">BudgetWise</h1>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/auth?mode=signin')}>
+            <Button variant="ghost" onClick={() => navigate('/auth', { state: { mode: 'signin' } })}>
               Sign In
             </Button>
-            <Button onClick={() => navigate('/auth?mode=signup')}>
+            <Button onClick={() => navigate('/auth', { state: { mode: 'signup' } })}>
               Get Started
             </Button>
           </div>

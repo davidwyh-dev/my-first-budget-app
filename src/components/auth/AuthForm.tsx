@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { useConvexAuth } from 'convex/react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import Button from '../ui/Button';
@@ -13,17 +14,31 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   const { signIn } = useAuthActions();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const navigate = useNavigate();
+  
+  // Debug: log auth state on every render
+  console.log('[AuthForm] Render - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Redirect when authenticated
+  useEffect(() => {
+    console.log('[AuthForm] Auth state effect - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+    if (isAuthenticated) {
+      console.log('[AuthForm] Redirecting to /app');
+      navigate('/app', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    console.log('[AuthForm] Starting sign in...');
 
     try {
       const formData = new FormData();
@@ -34,11 +49,19 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
         formData.append('name', name);
       }
       
-      await signIn('password', formData);
+      console.log('[AuthForm] Calling signIn...');
+      const result = await signIn('password', formData);
+      console.log('[AuthForm] signIn completed successfully, result:', result);
       
-      // Redirect to dashboard after successful sign-in
-      navigate('/app');
+      // Workaround: If auth state doesn't update within 2 seconds, reload the page
+      // This forces the auth provider to re-check the session
+      setTimeout(() => {
+        console.log('[AuthForm] Timeout - checking if still on auth page...');
+        // If we're still here after 2s, the auth state didn't update - force reload
+        window.location.href = '/app';
+      }, 2000);
     } catch (err: unknown) {
+      setLoading(false);
       console.error('Auth error:', err);
       
       // Handle specific error cases
@@ -61,8 +84,6 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
       } else {
         setError('An error occurred. Please try again.');
       }
-    } finally {
-      setLoading(false);
     }
   };
 

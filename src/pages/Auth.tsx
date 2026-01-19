@@ -1,23 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import AuthForm from '../components/auth/AuthForm';
 import Button from '../components/ui/Button';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const location = useLocation();
+  
+  // Get initial mode from navigation state, default to 'signup'
+  const initialMode = (location.state as { mode?: string })?.mode === 'signin' ? 'signin' : 'signup';
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
 
-  // Sync mode with URL parameter
-  useEffect(() => {
-    const urlMode = searchParams.get('mode');
-    if (urlMode === 'signin') {
-      setMode('signin');
-    } else if (urlMode === 'signup') {
-      setMode('signup');
-    }
-  }, [searchParams]);
+  const handleToggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -45,7 +42,7 @@ export default function Auth() {
           {/* Auth Form */}
           <AuthForm 
             mode={mode} 
-            onToggleMode={() => setMode(mode === 'signin' ? 'signup' : 'signin')} 
+            onToggleMode={handleToggleMode} 
           />
 
           {/* Terms */}

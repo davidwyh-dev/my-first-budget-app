@@ -1,7 +1,7 @@
 export default {
   providers: [
     {
-      domain: "https://your-deployment.convex.site",
+      domain: "https://pastel-clownfish-426.convex.site",
       applicationID: "convex",
     },
   ],
