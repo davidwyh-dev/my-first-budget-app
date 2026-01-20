@@ -1,12 +1,70 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, MapPin, Calculator } from 'lucide-react';
+import { DollarSign, MapPin, Calculator, Info } from 'lucide-react';
 import Input from '../ui/Input';
-import { calculateTax, formatCurrency, formatPercent, TaxBreakdown } from '../../lib/taxCalculator';
+import Tooltip from '../ui/Tooltip';
+import { calculateTax, formatCurrency, formatPercent, TaxBreakdown, TaxItemDetail } from '../../lib/taxCalculator';
 
 interface IncomePanelProps {
   beforeTaxIncome: number | undefined;
   zipCode: string | undefined;
   onUpdate: (beforeTaxIncome: number, zipCode: string, afterTaxIncome: number) => void;
+}
+
+function TaxTooltipContent({ details }: { details: TaxItemDetail }) {
+  return (
+    <div className="space-y-2 min-w-[200px]">
+      <div className="text-text-primary font-medium border-b border-border pb-2">
+        {details.description}
+      </div>
+      
+      {details.brackets && details.brackets.length > 0 ? (
+        <div className="space-y-1.5">
+          {details.brackets.map((bracket, index) => (
+            <div key={index} className="flex justify-between items-start gap-4 text-xs">
+              <div className="text-text-secondary">
+                {formatPercent(bracket.rate)} on{' '}
+                {bracket.max === Infinity || bracket.max >= 1000000000
+                  ? `above ${formatCurrency(bracket.min)}`
+                  : `${formatCurrency(bracket.min)} - ${formatCurrency(bracket.max)}`}
+              </div>
+              <div className="font-mono text-text-primary whitespace-nowrap">
+                {formatCurrency(bracket.taxAmount)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : details.flatRate !== undefined && details.flatRate > 0 ? (
+        <div className="text-xs text-text-secondary">
+          Flat rate: {formatPercent(details.flatRate)}
+        </div>
+      ) : null}
+      
+      <div className="border-t border-border pt-2 flex justify-between text-xs">
+        <span className="text-text-secondary">Effective rate:</span>
+        <span className="font-mono text-text-primary font-medium">{formatPercent(details.effectiveRate)}</span>
+      </div>
+    </div>
+  );
+}
+
+interface TaxLineItemProps {
+  label: string;
+  amount: number;
+  details: TaxItemDetail;
+}
+
+function TaxLineItem({ label, amount, details }: TaxLineItemProps) {
+  return (
+    <div className="flex justify-between text-sm items-center">
+      <Tooltip content={<TaxTooltipContent details={details} />} position="right">
+        <span className="text-text-secondary font-body flex items-center gap-1.5 cursor-help hover:text-text-primary transition-colors">
+          {label}
+          <Info className="w-3.5 h-3.5 text-text-secondary/60" />
+        </span>
+      </Tooltip>
+      <span className="font-mono text-danger">-{formatCurrency(amount)}</span>
+    </div>
+  );
 }
 
 export default function IncomePanel({ beforeTaxIncome, zipCode, onUpdate }: IncomePanelProps) {
@@ -89,28 +147,33 @@ export default function IncomePanel({ beforeTaxIncome, zipCode, onUpdate }: Inco
             </div>
             
             <div className="border-t border-border pt-3 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary font-body">Federal Tax</span>
-                <span className="font-mono text-danger">-{formatCurrency(taxBreakdown.federalTax)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary font-body">State Tax</span>
-                <span className="font-mono text-danger">-{formatCurrency(taxBreakdown.stateTax)}</span>
-              </div>
+              <TaxLineItem 
+                label="Federal Tax" 
+                amount={taxBreakdown.federalTax} 
+                details={taxBreakdown.federalTaxDetails} 
+              />
+              <TaxLineItem 
+                label="State Tax" 
+                amount={taxBreakdown.stateTax} 
+                details={taxBreakdown.stateTaxDetails} 
+              />
               {taxBreakdown.localTax > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary font-body">Local Tax</span>
-                  <span className="font-mono text-danger">-{formatCurrency(taxBreakdown.localTax)}</span>
-                </div>
+                <TaxLineItem 
+                  label="Local Tax" 
+                  amount={taxBreakdown.localTax} 
+                  details={taxBreakdown.localTaxDetails} 
+                />
               )}
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary font-body">Social Security</span>
-                <span className="font-mono text-danger">-{formatCurrency(taxBreakdown.socialSecurity)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-secondary font-body">Medicare</span>
-                <span className="font-mono text-danger">-{formatCurrency(taxBreakdown.medicare)}</span>
-              </div>
+              <TaxLineItem 
+                label="Social Security" 
+                amount={taxBreakdown.socialSecurity} 
+                details={taxBreakdown.socialSecurityDetails} 
+              />
+              <TaxLineItem 
+                label="Medicare" 
+                amount={taxBreakdown.medicare} 
+                details={taxBreakdown.medicareDetails} 
+              />
             </div>
             
             <div className="border-t border-border pt-3">

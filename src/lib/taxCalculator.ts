@@ -177,6 +177,22 @@ const zipToState: Record<string, string> = {
   '995': 'AK', '996': 'AK', '997': 'AK', '998': 'AK', '999': 'AK',
 };
 
+export interface BracketDetail {
+  min: number;
+  max: number;
+  rate: number;
+  taxableAmount: number;
+  taxAmount: number;
+}
+
+export interface TaxItemDetail {
+  totalAmount: number;
+  effectiveRate: number;
+  brackets?: BracketDetail[];
+  flatRate?: number;
+  description?: string;
+}
+
 export interface TaxBreakdown {
   grossIncome: number;
   federalTax: number;
@@ -189,6 +205,12 @@ export interface TaxBreakdown {
   effectiveRate: number;
   stateName: string | null;
   stateCode: string | null;
+  // Detailed breakdowns for tooltips
+  federalTaxDetails: TaxItemDetail;
+  stateTaxDetails: TaxItemDetail;
+  localTaxDetails: TaxItemDetail;
+  socialSecurityDetails: TaxItemDetail;
+  medicareDetails: TaxItemDetail;
 }
 
 function getStateFromZip(zipCode: string): string | null {
@@ -196,67 +218,172 @@ function getStateFromZip(zipCode: string): string | null {
   return zipToState[prefix] || null;
 }
 
-function calculateFederalTax(income: number): number {
+function calculateFederalTax(income: number): TaxItemDetail {
   let tax = 0;
   let remainingIncome = income;
+  const brackets: BracketDetail[] = [];
 
   for (const bracket of federalBrackets) {
     if (remainingIncome <= 0) break;
     const taxableInBracket = Math.min(remainingIncome, bracket.max - bracket.min);
-    tax += taxableInBracket * bracket.rate;
+    const taxAmount = taxableInBracket * bracket.rate;
+    tax += taxAmount;
+    
+    if (taxableInBracket > 0) {
+      brackets.push({
+        min: bracket.min,
+        max: bracket.max === Infinity ? income : Math.min(bracket.max, income),
+        rate: bracket.rate,
+        taxableAmount: taxableInBracket,
+        taxAmount,
+      });
+    }
+    
     remainingIncome -= taxableInBracket;
   }
 
-  return tax;
+  return {
+    totalAmount: tax,
+    effectiveRate: income > 0 ? tax / income : 0,
+    brackets,
+    description: 'Federal income tax uses progressive brackets',
+  };
 }
 
-function calculateStateTax(income: number, stateCode: string): number {
+function calculateStateTax(income: number, stateCode: string): TaxItemDetail {
   const stateInfo = stateRates[stateCode];
-  if (!stateInfo) return 0;
-  return income * stateInfo.rate;
+  if (!stateInfo) {
+    return {
+      totalAmount: 0,
+      effectiveRate: 0,
+      flatRate: 0,
+      description: 'No state income tax',
+    };
+  }
+  const taxAmount = income * stateInfo.rate;
+  return {
+    totalAmount: taxAmount,
+    effectiveRate: income > 0 ? taxAmount / income : 0,
+    flatRate: stateInfo.rate,
+    description: `${stateInfo.name} uses a flat tax rate`,
+  };
 }
 
-function calculateLocalTax(income: number, zipCode: string): number {
+function calculateLocalTax(income: number, zipCode: string): TaxItemDetail {
   const localRate = localRates[zipCode] || 0;
-  return income * localRate;
+  const taxAmount = income * localRate;
+  return {
+    totalAmount: taxAmount,
+    effectiveRate: income > 0 ? taxAmount / income : 0,
+    flatRate: localRate,
+    description: localRate > 0 ? 'Local/city income tax' : 'No local income tax',
+  };
 }
 
-function calculateFICATax(income: number): { socialSecurity: number; medicare: number } {
-  const socialSecurity = Math.min(income, SOCIAL_SECURITY_WAGE_BASE) * SOCIAL_SECURITY_RATE;
-  let medicare = income * MEDICARE_RATE;
+function calculateFICATax(income: number): { socialSecurityDetails: TaxItemDetail; medicareDetails: TaxItemDetail } {
+  const socialSecurityTaxable = Math.min(income, SOCIAL_SECURITY_WAGE_BASE);
+  const socialSecurityAmount = socialSecurityTaxable * SOCIAL_SECURITY_RATE;
   
-  if (income > ADDITIONAL_MEDICARE_THRESHOLD) {
-    medicare += (income - ADDITIONAL_MEDICARE_THRESHOLD) * ADDITIONAL_MEDICARE_RATE;
+  const socialSecurityBrackets: BracketDetail[] = [];
+  if (socialSecurityTaxable > 0) {
+    socialSecurityBrackets.push({
+      min: 0,
+      max: SOCIAL_SECURITY_WAGE_BASE,
+      rate: SOCIAL_SECURITY_RATE,
+      taxableAmount: socialSecurityTaxable,
+      taxAmount: socialSecurityAmount,
+    });
   }
   
-  return { socialSecurity, medicare };
+  const socialSecurityDetails: TaxItemDetail = {
+    totalAmount: socialSecurityAmount,
+    effectiveRate: income > 0 ? socialSecurityAmount / income : 0,
+    brackets: socialSecurityBrackets,
+    description: `6.2% on income up to $${SOCIAL_SECURITY_WAGE_BASE.toLocaleString()}`,
+  };
+  
+  const medicareBrackets: BracketDetail[] = [];
+  const baseMedicare = income * MEDICARE_RATE;
+  
+  if (income > 0) {
+    if (income <= ADDITIONAL_MEDICARE_THRESHOLD) {
+      medicareBrackets.push({
+        min: 0,
+        max: income,
+        rate: MEDICARE_RATE,
+        taxableAmount: income,
+        taxAmount: baseMedicare,
+      });
+    } else {
+      medicareBrackets.push({
+        min: 0,
+        max: ADDITIONAL_MEDICARE_THRESHOLD,
+        rate: MEDICARE_RATE,
+        taxableAmount: ADDITIONAL_MEDICARE_THRESHOLD,
+        taxAmount: ADDITIONAL_MEDICARE_THRESHOLD * MEDICARE_RATE,
+      });
+      const additionalTaxable = income - ADDITIONAL_MEDICARE_THRESHOLD;
+      const additionalTax = additionalTaxable * (MEDICARE_RATE + ADDITIONAL_MEDICARE_RATE);
+      medicareBrackets.push({
+        min: ADDITIONAL_MEDICARE_THRESHOLD,
+        max: income,
+        rate: MEDICARE_RATE + ADDITIONAL_MEDICARE_RATE,
+        taxableAmount: additionalTaxable,
+        taxAmount: additionalTax,
+      });
+    }
+  }
+  
+  let totalMedicare = baseMedicare;
+  if (income > ADDITIONAL_MEDICARE_THRESHOLD) {
+    totalMedicare += (income - ADDITIONAL_MEDICARE_THRESHOLD) * ADDITIONAL_MEDICARE_RATE;
+  }
+  
+  const medicareDetails: TaxItemDetail = {
+    totalAmount: totalMedicare,
+    effectiveRate: income > 0 ? totalMedicare / income : 0,
+    brackets: medicareBrackets,
+    description: income > ADDITIONAL_MEDICARE_THRESHOLD 
+      ? `1.45% base + 0.9% additional Medicare tax above $${ADDITIONAL_MEDICARE_THRESHOLD.toLocaleString()}`
+      : '1.45% on all wages',
+  };
+  
+  return { socialSecurityDetails, medicareDetails };
 }
 
 export function calculateTax(grossIncome: number, zipCode: string): TaxBreakdown {
   const stateCode = getStateFromZip(zipCode);
   const stateInfo = stateCode ? stateRates[stateCode] : null;
   
-  const federalTax = calculateFederalTax(grossIncome);
-  const stateTax = stateCode ? calculateStateTax(grossIncome, stateCode) : 0;
-  const localTax = calculateLocalTax(grossIncome, zipCode);
-  const { socialSecurity, medicare } = calculateFICATax(grossIncome);
+  const federalTaxDetails = calculateFederalTax(grossIncome);
+  const stateTaxDetails = stateCode 
+    ? calculateStateTax(grossIncome, stateCode) 
+    : { totalAmount: 0, effectiveRate: 0, flatRate: 0, description: 'No state income tax' };
+  const localTaxDetails = calculateLocalTax(grossIncome, zipCode);
+  const { socialSecurityDetails, medicareDetails } = calculateFICATax(grossIncome);
   
-  const totalTax = federalTax + stateTax + localTax + socialSecurity + medicare;
+  const totalTax = federalTaxDetails.totalAmount + stateTaxDetails.totalAmount + localTaxDetails.totalAmount + socialSecurityDetails.totalAmount + medicareDetails.totalAmount;
   const netIncome = grossIncome - totalTax;
   const effectiveRate = grossIncome > 0 ? totalTax / grossIncome : 0;
 
   return {
     grossIncome,
-    federalTax,
-    stateTax,
-    localTax,
-    socialSecurity,
-    medicare,
+    federalTax: federalTaxDetails.totalAmount,
+    stateTax: stateTaxDetails.totalAmount,
+    localTax: localTaxDetails.totalAmount,
+    socialSecurity: socialSecurityDetails.totalAmount,
+    medicare: medicareDetails.totalAmount,
     totalTax,
     netIncome,
     effectiveRate,
     stateName: stateInfo?.name || null,
     stateCode,
+    // Detailed breakdowns
+    federalTaxDetails,
+    stateTaxDetails,
+    localTaxDetails,
+    socialSecurityDetails,
+    medicareDetails,
   };
 }
 
