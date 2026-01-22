@@ -8,7 +8,7 @@ import Card, { CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/Accordion';
 import BudgetChart from '../components/dashboard/BudgetChart';
-import IncomePanel from '../components/dashboard/IncomePanel';
+import IncomePanel, { TaxSavingsByCategory } from '../components/dashboard/IncomePanel';
 import BudgetPanel from '../components/dashboard/BudgetPanel';
 import SpendPanel from '../components/dashboard/SpendPanel';
 
@@ -44,6 +44,7 @@ export default function Dashboard() {
     zipCode: string;
     afterTaxIncome: number;
   } | null>(null);
+  const [taxSavingsByCategory, setTaxSavingsByCategory] = useState<TaxSavingsByCategory[]>([]);
 
   // Navigate to first dashboard if none selected
   useEffect(() => {
@@ -52,8 +53,9 @@ export default function Dashboard() {
     }
   }, [dashboardId, dashboards, navigate]);
 
-  const handleIncomeUpdate = useCallback((beforeTaxIncome: number, zipCode: string, afterTaxIncome: number) => {
+  const handleIncomeUpdate = useCallback((beforeTaxIncome: number, zipCode: string, afterTaxIncome: number, taxSavings: TaxSavingsByCategory[]) => {
     setPendingIncomeUpdate({ beforeTaxIncome, zipCode, afterTaxIncome });
+    setTaxSavingsByCategory(taxSavings);
   }, []);
 
   const handleSave = async () => {
@@ -96,7 +98,7 @@ export default function Dashboard() {
     await removeCategory({ id: id as Id<'categories'> });
   };
 
-  const handleAddTransaction = async (description: string, amount: number, date: number, categoryId?: string) => {
+  const handleAddTransaction = async (description: string, amount: number, date: number, categoryId?: string, isPreTax?: boolean) => {
     if (!dashboardId) return;
     await createTransaction({
       dashboardId: dashboardId as Id<'dashboards'>,
@@ -104,16 +106,18 @@ export default function Dashboard() {
       amount,
       date,
       categoryId: categoryId as Id<'categories'> | undefined,
+      isPreTax,
     });
   };
 
-  const handleUpdateTransaction = async (id: string, description: string, amount: number, date: number, categoryId?: string) => {
+  const handleUpdateTransaction = async (id: string, description: string, amount: number, date: number, categoryId?: string, isPreTax?: boolean) => {
     await updateTransaction({
       id: id as Id<'transactions'>,
       description,
       amount,
       date,
       categoryId: categoryId as Id<'categories'> | undefined,
+      isPreTax,
     });
   };
 
@@ -165,6 +169,9 @@ export default function Dashboard() {
   const afterTaxIncome = pendingIncomeUpdate?.afterTaxIncome ?? dashboard.afterTaxIncome ?? 0;
   const hasUnsavedChanges = pendingIncomeUpdate !== null;
 
+  // Filter pre-tax transactions
+  const preTaxTransactions = transactions.filter(tx => tx.isPreTax === true);
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
       {/* Header */}
@@ -209,6 +216,7 @@ export default function Dashboard() {
             <IncomePanel
               beforeTaxIncome={pendingIncomeUpdate?.beforeTaxIncome ?? dashboard.beforeTaxIncome}
               zipCode={pendingIncomeUpdate?.zipCode ?? dashboard.zipCode}
+              preTaxTransactions={preTaxTransactions}
               onUpdate={handleIncomeUpdate}
             />
           </AccordionContent>
@@ -223,6 +231,7 @@ export default function Dashboard() {
             <BudgetPanel
               categories={categories}
               afterTaxIncome={afterTaxIncome}
+              taxSavingsByCategory={taxSavingsByCategory}
               onAdd={handleAddCategory}
               onUpdate={handleUpdateCategory}
               onDelete={handleDeleteCategory}

@@ -28,6 +28,7 @@ export const create = mutation({
     description: v.string(),
     amount: v.number(),
     date: v.number(),
+    isPreTax: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -45,6 +46,7 @@ export const create = mutation({
       description: args.description,
       amount: args.amount,
       date: args.date,
+      isPreTax: args.isPreTax,
     });
   },
 });
@@ -56,6 +58,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     amount: v.optional(v.number()),
     date: v.optional(v.number()),
+    isPreTax: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

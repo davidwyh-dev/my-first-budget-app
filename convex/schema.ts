@@ -33,6 +33,7 @@ export default defineSchema({
     description: v.string(),
     amount: v.number(),
     date: v.number(),
+    isPreTax: v.optional(v.boolean()), // Optional, default false (after-tax)
   })
     .index("by_dashboard", ["dashboardId"])
     .index("by_category", ["categoryId"])

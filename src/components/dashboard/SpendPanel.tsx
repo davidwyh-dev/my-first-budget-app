@@ -15,13 +15,14 @@ interface Transaction {
   description: string;
   amount: number;
   date: number;
+  isPreTax?: boolean;
 }
 
 interface SpendPanelProps {
   transactions: Transaction[];
   categories: Category[];
-  onAdd: (description: string, amount: number, date: number, categoryId?: string) => void;
-  onUpdate: (id: string, description: string, amount: number, date: number, categoryId?: string) => void;
+  onAdd: (description: string, amount: number, date: number, categoryId?: string, isPreTax?: boolean) => void;
+  onUpdate: (id: string, description: string, amount: number, date: number, categoryId?: string, isPreTax?: boolean) => void;
   onDelete: (id: string) => void;
 }
 
@@ -37,6 +38,7 @@ export default function SpendPanel({
   const [newAmount, setNewAmount] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newCategoryId, setNewCategoryId] = useState('');
+  const [newIsPreTax, setNewIsPreTax] = useState(false);
 
   const handleAdd = () => {
     if (newDescription.trim() && newAmount) {
@@ -44,12 +46,14 @@ export default function SpendPanel({
         newDescription.trim(),
         parseFloat(newAmount),
         new Date(newDate).getTime(),
-        newCategoryId || undefined
+        newCategoryId || undefined,
+        newIsPreTax || undefined
       );
       setNewDescription('');
       setNewAmount('');
       setNewDate(new Date().toISOString().split('T')[0]);
       setNewCategoryId('');
+      setNewIsPreTax(false);
       setIsAdding(false);
     }
   };
@@ -60,7 +64,19 @@ export default function SpendPanel({
       tx.description,
       tx.amount,
       tx.date,
-      categoryId || undefined
+      categoryId || undefined,
+      tx.isPreTax
+    );
+  };
+
+  const handlePreTaxChange = (transactionId: string, isPreTax: boolean, tx: Transaction) => {
+    onUpdate(
+      transactionId,
+      tx.description,
+      tx.amount,
+      tx.date,
+      tx.categoryId,
+      isPreTax || undefined
     );
   };
 
@@ -96,8 +112,9 @@ export default function SpendPanel({
         {/* Header */}
         <div className="grid grid-cols-12 gap-2 p-3 border-b border-border bg-surface text-sm font-medium text-text-secondary">
           <div className="col-span-2">Date</div>
-          <div className="col-span-4">Description</div>
-          <div className="col-span-3">Category</div>
+          <div className="col-span-3">Description</div>
+          <div className="col-span-2">Category</div>
+          <div className="col-span-2 text-center">Pre-Tax</div>
           <div className="col-span-2 text-right">Amount</div>
           <div className="col-span-1"></div>
         </div>
@@ -119,10 +136,10 @@ export default function SpendPanel({
               <div className="col-span-2 text-sm text-text-secondary font-mono">
                 {formatDate(tx.date)}
               </div>
-              <div className="col-span-4 text-sm text-text-primary font-body truncate">
+              <div className="col-span-3 text-sm text-text-primary font-body truncate">
                 {tx.description}
               </div>
-              <div className="col-span-3">
+              <div className="col-span-2">
                 <select
                   value={tx.categoryId || ''}
                   onChange={(e) => handleCategoryChange(tx._id, e.target.value, tx)}
@@ -132,6 +149,14 @@ export default function SpendPanel({
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+              <div className="col-span-2 flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={tx.isPreTax || false}
+                  onChange={(e) => handlePreTaxChange(tx._id, e.target.checked, tx)}
+                  className="w-4 h-4 rounded border-border bg-background text-accent focus:ring-accent focus:ring-offset-0 cursor-pointer"
+                />
               </div>
               <div className="col-span-2 text-right font-mono text-sm text-danger">
                 -{formatCurrency(tx.amount)}
@@ -160,7 +185,7 @@ export default function SpendPanel({
                   className="w-full px-2 py-1 bg-background border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <input
                   type="text"
                   value={newDescription}
@@ -169,7 +194,7 @@ export default function SpendPanel({
                   className="w-full px-2 py-1 bg-background border border-border rounded-lg text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="col-span-3">
+              <div className="col-span-2">
                 <select
                   value={newCategoryId}
                   onChange={(e) => setNewCategoryId(e.target.value)}
@@ -179,6 +204,14 @@ export default function SpendPanel({
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+              <div className="col-span-2 flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={newIsPreTax}
+                  onChange={(e) => setNewIsPreTax(e.target.checked)}
+                  className="w-4 h-4 rounded border-border bg-background text-accent focus:ring-accent focus:ring-offset-0 cursor-pointer"
+                />
               </div>
               <div className="col-span-2">
                 <input

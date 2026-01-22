@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Check, X, Percent, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Percent, DollarSign, TrendingUp, Info } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
+import Tooltip from '../ui/Tooltip';
 import { formatCurrency } from '../../lib/taxCalculator';
+import type { TaxSavingsByCategory } from './IncomePanel';
 
 interface Category {
   _id: string;
@@ -16,6 +18,7 @@ interface Category {
 interface BudgetPanelProps {
   categories: Category[];
   afterTaxIncome: number;
+  taxSavingsByCategory: TaxSavingsByCategory[];
   onAdd: (name: string, type: 'percentage' | 'fixed', value: number) => void;
   onUpdate: (id: string, name: string, type: 'percentage' | 'fixed', value: number) => void;
   onDelete: (id: string) => void;
@@ -24,10 +27,16 @@ interface BudgetPanelProps {
 export default function BudgetPanel({ 
   categories, 
   afterTaxIncome, 
+  taxSavingsByCategory,
   onAdd, 
   onUpdate, 
   onDelete 
 }: BudgetPanelProps) {
+  // Helper to get tax savings for a category
+  const getTaxSavingsForCategory = (categoryId: string): number => {
+    const savings = taxSavingsByCategory.find(s => s.categoryId === categoryId);
+    return savings?.taxSavings || 0;
+  };
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -146,43 +155,86 @@ export default function BudgetPanel({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${category.type === 'percentage' ? 'bg-accent/10' : 'bg-success/10'}`}>
-                    {category.type === 'percentage' 
-                      ? <Percent className="w-4 h-4 text-accent" />
-                      : <DollarSign className="w-4 h-4 text-success" />
-                    }
+              (() => {
+                const taxSavings = getTaxSavingsForCategory(category._id);
+                const budgetAmount = calculateAmount(category.type, category.value);
+                const effectiveCost = budgetAmount - taxSavings;
+                
+                return (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${category.type === 'percentage' ? 'bg-accent/10' : 'bg-success/10'}`}>
+                        {category.type === 'percentage' 
+                          ? <Percent className="w-4 h-4 text-accent" />
+                          : <DollarSign className="w-4 h-4 text-success" />
+                        }
+                      </div>
+                      <div>
+                        <p className="font-body font-medium text-text-primary">{category.name}</p>
+                        <div className="text-sm text-text-secondary font-mono">
+                          {category.type === 'percentage' 
+                            ? `${category.value}% = ${formatCurrency(budgetAmount)}`
+                            : formatCurrency(category.value)
+                          }
+                          {taxSavings > 0 && (
+                            <Tooltip
+                              content={
+                                <div className="space-y-2 min-w-[180px]">
+                                  <div className="text-text-primary font-medium border-b border-border pb-2">
+                                    Tax Savings Offset
+                                  </div>
+                                  <div className="space-y-1 text-xs">
+                                    <div className="flex justify-between">
+                                      <span className="text-text-secondary">Budget Amount:</span>
+                                      <span className="font-mono">{formatCurrency(budgetAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-success">Tax Savings:</span>
+                                      <span className="font-mono text-success">-{formatCurrency(taxSavings)}</span>
+                                    </div>
+                                    <div className="border-t border-border pt-1 flex justify-between font-medium">
+                                      <span className="text-text-primary">Effective Cost:</span>
+                                      <span className="font-mono text-text-primary">{formatCurrency(effectiveCost)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-text-secondary pt-1 border-t border-border">
+                                    Pre-tax contributions reduce your taxable income, saving you money on taxes.
+                                  </div>
+                                </div>
+                              }
+                              position="right"
+                            >
+                              <span className="inline-flex items-center gap-1 ml-2 text-success cursor-help hover:text-success/80 transition-colors">
+                                <TrendingUp className="w-3 h-3" />
+                                <span className="text-xs">-{formatCurrency(taxSavings)} tax savings</span>
+                                <Info className="w-3 h-3 text-success/60" />
+                              </span>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleStartEdit(category)}
+                        className="p-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(category._id)}
+                        className="p-2 text-danger hover:text-danger"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-body font-medium text-text-primary">{category.name}</p>
-                    <p className="text-sm text-text-secondary font-mono">
-                      {category.type === 'percentage' 
-                        ? `${category.value}% = ${formatCurrency(calculateAmount(category.type, category.value))}`
-                        : formatCurrency(category.value)
-                      }
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleStartEdit(category)}
-                    className="p-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(category._id)}
-                    className="p-2 text-danger hover:text-danger"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+                );
+              })()
             )}
           </div>
         ))}
