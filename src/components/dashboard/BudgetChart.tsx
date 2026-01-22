@@ -17,6 +17,7 @@ interface BudgetChartProps {
   categories: Category[];
   transactions: Transaction[];
   afterTaxIncome: number;
+  totalTaxSavings?: number;
 }
 
 // Distinct colors for categories that work well on dark backgrounds
@@ -43,7 +44,7 @@ interface CategorySpend {
   color: string;
 }
 
-export default function BudgetChart({ categories, transactions, afterTaxIncome }: BudgetChartProps) {
+export default function BudgetChart({ categories, transactions, afterTaxIncome, totalTaxSavings = 0 }: BudgetChartProps) {
   // Calculate spending by category
   const spendingByCategory = transactions.reduce((acc, tx) => {
     if (tx.categoryId) {
@@ -84,9 +85,24 @@ export default function BudgetChart({ categories, transactions, afterTaxIncome }
     });
   }
 
-  // Calculate totals
-  const totalBudget = categoryData.reduce((sum, cat) => sum + cat.budget, 0);
+  // Add tax savings as a special category if present
+  if (totalTaxSavings > 0) {
+    categoryData.unshift({
+      id: 'tax-savings',
+      name: 'Before-Tax Deduction Savings',
+      budget: totalTaxSavings,
+      spent: 0, // Tax savings don't have "spending" - it's money saved
+      color: '#22c55e', // success green
+    });
+  }
+
+  // Calculate totals (excluding tax savings from regular budget for clearer display)
+  const regularBudget = categoryData
+    .filter(cat => cat.id !== 'tax-savings')
+    .reduce((sum, cat) => sum + cat.budget, 0);
+  const totalBudget = regularBudget + totalTaxSavings;
   const totalSpent = categoryData.reduce((sum, cat) => sum + cat.spent, 0);
+  // Remaining includes tax savings as "extra" money saved
   const remaining = totalBudget - totalSpent;
   const isOverBudget = totalSpent > totalBudget;
   const spentPercentage = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
@@ -110,11 +126,17 @@ export default function BudgetChart({ categories, transactions, afterTaxIncome }
   return (
     <div className="w-full space-y-6">
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className={`grid ${totalTaxSavings > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
         <div>
           <p className="text-xs text-text-secondary font-body mb-1">Total Budget</p>
-          <p className="font-mono text-xl text-text-primary">{formatCurrency(totalBudget)}</p>
+          <p className="font-mono text-xl text-text-primary">{formatCurrency(regularBudget)}</p>
         </div>
+        {totalTaxSavings > 0 && (
+          <div>
+            <p className="text-xs text-success font-body mb-1">Tax Savings</p>
+            <p className="font-mono text-xl text-success">+{formatCurrency(totalTaxSavings)}</p>
+          </div>
+        )}
         <div>
           <p className="text-xs text-text-secondary font-body mb-1">Total Spent</p>
           <p className={`font-mono text-xl ${isOverBudget ? 'text-danger' : 'text-text-primary'}`}>
@@ -193,7 +215,19 @@ export default function BudgetChart({ categories, transactions, afterTaxIncome }
 
       {/* Category Legend */}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-        {categoryData.map((cat) => (
+        {/* Tax Savings in legend */}
+        {totalTaxSavings > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-success" />
+            <span className="text-sm text-success font-body font-medium">
+              Tax Savings
+            </span>
+            <span className="text-xs text-success font-mono">
+              +{formatCurrency(totalTaxSavings)}
+            </span>
+          </div>
+        )}
+        {categoryData.filter(cat => cat.id !== 'tax-savings').map((cat) => (
           <div key={cat.id} className="flex items-center gap-2">
             <div 
               className="w-3 h-3 rounded-sm" 
@@ -212,7 +246,27 @@ export default function BudgetChart({ categories, transactions, afterTaxIncome }
       {/* Category Breakdown */}
       <div className="space-y-2 pt-2 border-t border-border">
         <p className="text-xs text-text-secondary font-body mb-3">Category Breakdown</p>
-        {categoryData.filter(cat => cat.id !== 'uncategorized').map((cat) => {
+        
+        {/* Tax Savings - Special display */}
+        {totalTaxSavings > 0 && (
+          <div className="flex items-center gap-3 bg-success/5 rounded-lg p-2 -mx-2">
+            <div className="w-2 h-2 rounded-full flex-shrink-0 bg-success" />
+            <span className="text-sm text-success font-body w-28 truncate font-medium">
+              Tax Savings
+            </span>
+            <div className="flex-1 h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+              <div 
+                className="h-full rounded-full bg-success"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <span className="text-xs font-mono w-20 text-right text-success font-medium">
+              +{formatCurrency(totalTaxSavings)}
+            </span>
+          </div>
+        )}
+
+        {categoryData.filter(cat => cat.id !== 'uncategorized' && cat.id !== 'tax-savings').map((cat) => {
           const catPercentage = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0;
           const isOver = cat.spent > cat.budget;
           

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Check, X, Percent, DollarSign, TrendingUp, Info } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Percent, DollarSign, TrendingUp, Info, PiggyBank } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -19,6 +19,7 @@ interface BudgetPanelProps {
   categories: Category[];
   afterTaxIncome: number;
   taxSavingsByCategory: TaxSavingsByCategory[];
+  totalTaxSavings: number;
   onAdd: (name: string, type: 'percentage' | 'fixed', value: number) => void;
   onUpdate: (id: string, name: string, type: 'percentage' | 'fixed', value: number) => void;
   onDelete: (id: string) => void;
@@ -28,6 +29,7 @@ export default function BudgetPanel({
   categories, 
   afterTaxIncome, 
   taxSavingsByCategory,
+  totalTaxSavings,
   onAdd, 
   onUpdate, 
   onDelete 
@@ -89,6 +91,8 @@ export default function BudgetPanel({
   const totalBudgeted = categories.reduce((sum, cat) => 
     sum + calculateAmount(cat.type, cat.value), 0
   );
+  // Include tax savings in the budgeted total
+  const totalBudgetedWithSavings = totalBudgeted + totalTaxSavings;
   const remaining = afterTaxIncome - totalBudgeted;
 
   return (
@@ -110,6 +114,55 @@ export default function BudgetPanel({
               <p className={`font-mono text-lg ${remaining >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatCurrency(remaining)}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Before-Tax Deduction Savings - Virtual Category */}
+      {totalTaxSavings > 0 && (
+        <div className="bg-success/10 rounded-xl p-4 border border-success/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-success/20">
+                <PiggyBank className="w-4 h-4 text-success" />
+              </div>
+              <div>
+                <p className="font-body font-medium text-text-primary">Before-Tax Deduction Savings</p>
+                <Tooltip
+                  content={
+                    <div className="space-y-2 min-w-[220px]">
+                      <div className="text-text-primary font-medium border-b border-border pb-2">
+                        Tax Savings from Pre-Tax Deductions
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        This is the total amount you save on taxes by making pre-tax contributions (like 401k, HSA, etc.). 
+                        This money stays in your pocket instead of going to taxes!
+                      </div>
+                      <div className="border-t border-border pt-2">
+                        <div className="text-xs text-text-secondary">
+                          Breakdown by category:
+                        </div>
+                        {taxSavingsByCategory.map((s, idx) => (
+                          <div key={idx} className="flex justify-between text-xs mt-1">
+                            <span className="text-text-secondary truncate max-w-[140px]">
+                              {categories.find(c => c._id === s.categoryId)?.name || 'Uncategorized'}
+                            </span>
+                            <span className="font-mono text-success">{formatCurrency(s.taxSavings)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  }
+                  position="right"
+                >
+                  <div className="text-sm text-success font-mono flex items-center gap-1.5 cursor-help hover:text-success/80 transition-colors">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    +{formatCurrency(totalTaxSavings)}
+                    <Info className="w-3.5 h-3.5 text-success/60" />
+                  </div>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </div>

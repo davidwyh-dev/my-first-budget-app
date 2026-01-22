@@ -172,6 +172,9 @@ export default function Dashboard() {
   // Filter pre-tax transactions
   const preTaxTransactions = transactions.filter(tx => tx.isPreTax === true);
 
+  // Calculate total tax savings
+  const totalTaxSavings = taxSavingsByCategory.reduce((sum, s) => sum + s.taxSavings, 0);
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
       {/* Header */}
@@ -202,6 +205,7 @@ export default function Dashboard() {
           categories={categories}
           transactions={transactions}
           afterTaxIncome={afterTaxIncome}
+          totalTaxSavings={totalTaxSavings}
         />
       </Card>
 
@@ -232,6 +236,7 @@ export default function Dashboard() {
               categories={categories}
               afterTaxIncome={afterTaxIncome}
               taxSavingsByCategory={taxSavingsByCategory}
+              totalTaxSavings={totalTaxSavings}
               onAdd={handleAddCategory}
               onUpdate={handleUpdateCategory}
               onDelete={handleDeleteCategory}
