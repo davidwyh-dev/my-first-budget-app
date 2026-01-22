@@ -159,7 +159,7 @@ export default function BudgetChart({ categories, transactions, afterTaxIncome, 
         <div className="h-12 bg-[#2a2a2a] rounded-xl overflow-hidden relative">
           {/* Stacked spend segments */}
           <div className="absolute inset-y-0 left-0 flex h-full" style={{ width: `${Math.min(spentPercentage, 100)}%` }}>
-            {categoryData.map((cat, index) => {
+            {categoryData.map((cat) => {
               const segmentWidth = getSegmentWidth(cat.spent);
               if (segmentWidth <= 0) return null;
               

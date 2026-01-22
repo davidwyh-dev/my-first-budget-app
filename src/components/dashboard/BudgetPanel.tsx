@@ -91,8 +91,6 @@ export default function BudgetPanel({
   const totalBudgeted = categories.reduce((sum, cat) => 
     sum + calculateAmount(cat.type, cat.value), 0
   );
-  // Include tax savings in the budgeted total
-  const totalBudgetedWithSavings = totalBudgeted + totalTaxSavings;
   const remaining = afterTaxIncome - totalBudgeted;
 
   return (
