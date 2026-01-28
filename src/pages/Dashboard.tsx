@@ -73,6 +73,13 @@ export default function Dashboard() {
   } | null>(null);
   const [taxSavingsByCategory, setTaxSavingsByCategory] = useState<TaxSavingsByCategory[]>([]);
 
+  // Clear pending income update when switching dashboards
+  // This prevents income from one dashboard "leaking" to another
+  useEffect(() => {
+    setPendingIncomeUpdate(null);
+    setTaxSavingsByCategory([]);
+  }, [dashboardId]);
+
   // Navigate to first dashboard if none selected
   useEffect(() => {
     if (!dashboardId && dashboards && dashboards.length > 0) {
