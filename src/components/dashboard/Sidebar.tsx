@@ -1,12 +1,34 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { Plus, Trash2, Edit2, Check, X, LayoutDashboard, LogOut } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import Button from '../ui/Button';
 import { formatRelativeTime } from '../../lib/utils';
+
+// Custom hook to sync with browser URL - bypasses React Router's state issues
+function useUrlDashboardId(): string | undefined {
+  const getSnapshot = () => {
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/app/')) {
+      return pathname.split('/app/')[1]?.split('/')[0] || undefined;
+    }
+    return undefined;
+  };
+  
+  const subscribe = (callback: () => void) => {
+    window.addEventListener('popstate', callback);
+    const interval = setInterval(callback, 100);
+    return () => {
+      window.removeEventListener('popstate', callback);
+      clearInterval(interval);
+    };
+  };
+  
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
 
 interface Dashboard {
   _id: Id<'dashboards'>;
@@ -16,7 +38,8 @@ interface Dashboard {
 
 export default function Sidebar() {
   const navigate = useNavigate();
-  const { dashboardId } = useParams();
+  // Use URL-synced dashboardId - always reflects current browser URL
+  const dashboardId = useUrlDashboardId();
   const { signOut } = useAuthActions();
   
   const dashboards = (useQuery(api.dashboards.list) || []) as Dashboard[];
@@ -141,9 +164,14 @@ export default function Sidebar() {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="p-3 cursor-pointer"
-                    onClick={() => navigate(`/app/${dashboard._id}`)}
+                  <Link
+                    to={`/app/${dashboard._id}`}
+                    className="block p-3 cursor-pointer no-underline"
+                    // #region agent log
+                    onClick={() => {
+                      fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.tsx:147',message:'Dashboard Link clicked',data:{clickedDashboardId:dashboard._id,clickedDashboardName:dashboard.name,currentDashboardId:dashboardId,currentPathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                    }}
+                    // #endregion
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 min-w-0">
@@ -156,6 +184,7 @@ export default function Sidebar() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            e.preventDefault();
                             handleStartRename(dashboard._id, dashboard.name);
                           }}
                           className="p-1 hover:bg-background rounded"
@@ -165,6 +194,7 @@ export default function Sidebar() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            e.preventDefault();
                             handleDelete(dashboard._id);
                           }}
                           className="p-1 hover:bg-background rounded"
@@ -176,7 +206,7 @@ export default function Sidebar() {
                     <p className="text-xs text-text-secondary mt-1 ml-6">
                       {formatRelativeTime(dashboard.updatedAt)}
                     </p>
-                  </div>
+                  </Link>
                 )}
               </div>
             );
