@@ -43,19 +43,11 @@ export default function Dashboard() {
   // This bypasses React Router's stale state issues caused by rapid Convex re-renders
   const dashboardId = useUrlDashboardId();
   
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:17',message:'Dashboard component rendered',data:{dashboardId,currentUrl:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
-  
   const dashboards = useQuery(api.dashboards.list);
   const dashboard = useQuery(
     api.dashboards.get,
     dashboardId ? { id: dashboardId as Id<'dashboards'> } : 'skip'
   );
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:24',message:'Dashboard query result',data:{dashboardId,dashboardLoaded:dashboard!==undefined,dashboardName:dashboard?.name,dashboardIsNull:dashboard===null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
   const categories = useQuery(
     api.categories.list,
     dashboardId ? { dashboardId: dashboardId as Id<'dashboards'> } : 'skip'
@@ -83,13 +75,7 @@ export default function Dashboard() {
 
   // Navigate to first dashboard if none selected
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:50',message:'useEffect auto-nav check',data:{dashboardId,dashboardsLoaded:!!dashboards,dashboardsLength:dashboards?.length,willAutoNavigate:!dashboardId && dashboards && dashboards.length > 0,firstDashboardId:dashboards?.[0]?._id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     if (!dashboardId && dashboards && dashboards.length > 0) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.tsx:54',message:'Auto-navigating to first dashboard',data:{targetDashboardId:dashboards[0]._id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       navigate(`/app/${dashboards[0]._id}`);
     }
   }, [dashboardId, dashboards, navigate]);

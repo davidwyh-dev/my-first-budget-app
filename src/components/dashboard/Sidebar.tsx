@@ -167,11 +167,6 @@ export default function Sidebar() {
                   <Link
                     to={`/app/${dashboard._id}`}
                     className="block p-3 cursor-pointer no-underline"
-                    // #region agent log
-                    onClick={() => {
-                      fetch('http://127.0.0.1:7242/ingest/58e1b280-2e34-4934-9947-55117da72a3e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.tsx:147',message:'Dashboard Link clicked',data:{clickedDashboardId:dashboard._id,clickedDashboardName:dashboard.name,currentDashboardId:dashboardId,currentPathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-                    }}
-                    // #endregion
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 min-w-0">
