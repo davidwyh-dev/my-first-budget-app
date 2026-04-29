@@ -1,12 +1,17 @@
 import { useState, useSyncExternalStore } from 'react';
-import { useQuery, useMutation } from 'convex/react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
-import { Plus, Trash2, Edit2, Check, X, LayoutDashboard, LogOut } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, LayoutDashboard, LogOut, UserPlus } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import Button from '../ui/Button';
 import { formatRelativeTime } from '../../lib/utils';
+import { useGuestMode } from '../../context/GuestModeContext';
+import {
+  useDashboardsList,
+  useCreateDashboard,
+  useRenameDashboard,
+  useRemoveDashboard,
+} from '../../hooks/useBudgetData';
 
 // Custom hook to sync with browser URL - bypasses React Router's state issues
 function useUrlDashboardId(): string | undefined {
@@ -30,22 +35,17 @@ function useUrlDashboardId(): string | undefined {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-interface Dashboard {
-  _id: Id<'dashboards'>;
-  name: string;
-  updatedAt: number;
-}
-
 export default function Sidebar() {
   const navigate = useNavigate();
   // Use URL-synced dashboardId - always reflects current browser URL
   const dashboardId = useUrlDashboardId();
   const { signOut } = useAuthActions();
-  
-  const dashboards = (useQuery(api.dashboards.list) || []) as Dashboard[];
-  const createDashboard = useMutation(api.dashboards.create);
-  const renameDashboard = useMutation(api.dashboards.rename);
-  const removeDashboard = useMutation(api.dashboards.remove);
+  const { isGuestMode } = useGuestMode();
+
+  const dashboards = useDashboardsList() ?? [];
+  const createDashboard = useCreateDashboard();
+  const renameDashboard = useRenameDashboard();
+  const removeDashboard = useRemoveDashboard();
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -91,6 +91,10 @@ export default function Sidebar() {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleSignUpToSave = () => {
+    navigate('/auth', { state: { mode: 'signup' } });
   };
 
   return (
@@ -221,14 +225,25 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-border">
-        <Button
-          variant="ghost"
-          className="w-full justify-start"
-          onClick={handleSignOut}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        {isGuestMode ? (
+          <Button
+            variant="primary"
+            className="w-full justify-start"
+            onClick={handleSignUpToSave}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Sign Up to Save
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        )}
       </div>
     </aside>
   );

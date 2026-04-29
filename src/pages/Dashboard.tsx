@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { DollarSign, Tag, CreditCard, Save, Loader2 } from 'lucide-react';
 import Card, { CardTitle } from '../components/ui/Card';
@@ -11,6 +9,19 @@ import BudgetChart from '../components/dashboard/BudgetChart';
 import IncomePanel, { TaxSavingsByCategory } from '../components/dashboard/IncomePanel';
 import BudgetPanel from '../components/dashboard/BudgetPanel';
 import SpendPanel from '../components/dashboard/SpendPanel';
+import {
+  useDashboardsList,
+  useDashboard,
+  useCategories,
+  useTransactions,
+  useUpdateDashboard,
+  useCreateCategory,
+  useUpdateCategory,
+  useRemoveCategory,
+  useCreateTransaction,
+  useUpdateTransaction,
+  useRemoveTransaction,
+} from '../hooks/useBudgetData';
 
 // Custom hook to sync with browser URL - bypasses React Router's state issues
 function useUrlDashboardId(): string | undefined {
@@ -43,27 +54,18 @@ export default function Dashboard() {
   // This bypasses React Router's stale state issues caused by rapid Convex re-renders
   const dashboardId = useUrlDashboardId();
   
-  const dashboards = useQuery(api.dashboards.list);
-  const dashboard = useQuery(
-    api.dashboards.get,
-    dashboardId ? { id: dashboardId as Id<'dashboards'> } : 'skip'
-  );
-  const categories = useQuery(
-    api.categories.list,
-    dashboardId ? { dashboardId: dashboardId as Id<'dashboards'> } : 'skip'
-  ) || [];
-  const transactions = useQuery(
-    api.transactions.list,
-    dashboardId ? { dashboardId: dashboardId as Id<'dashboards'> } : 'skip'
-  ) || [];
+  const dashboards = useDashboardsList();
+  const dashboard = useDashboard(dashboardId as Id<'dashboards'> | undefined);
+  const categories = useCategories(dashboardId as Id<'dashboards'> | undefined);
+  const transactions = useTransactions(dashboardId as Id<'dashboards'> | undefined);
 
-  const updateDashboard = useMutation(api.dashboards.update);
-  const createCategory = useMutation(api.categories.create);
-  const updateCategory = useMutation(api.categories.update);
-  const removeCategory = useMutation(api.categories.remove);
-  const createTransaction = useMutation(api.transactions.create);
-  const updateTransaction = useMutation(api.transactions.update);
-  const removeTransaction = useMutation(api.transactions.remove);
+  const updateDashboard = useUpdateDashboard();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const removeCategory = useRemoveCategory();
+  const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
+  const removeTransaction = useRemoveTransaction();
 
   const [isSaving, setIsSaving] = useState(false);
   const [pendingIncomeUpdate, setPendingIncomeUpdate] = useState<{

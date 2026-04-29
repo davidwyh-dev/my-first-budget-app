@@ -4,10 +4,13 @@ import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import MainLayout from './components/layout/MainLayout'
+import { GuestModeProvider, useGuestMode } from './context/GuestModeContext'
+import GuestDataMigrator from './components/GuestDataMigrator'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth()
+  const { isGuestMode } = useGuestMode()
 
   if (isLoading) {
     return (
@@ -17,8 +20,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />
+  if (!isAuthenticated && !isGuestMode) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
@@ -45,27 +48,30 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <PublicRoute>
-            <Landing />
-          </PublicRoute>
-        } />
-        <Route path="/auth" element={
-          <PublicRoute>
-            <Auth />
-          </PublicRoute>
-        } />
-        <Route path="/app" element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path=":dashboardId" element={<Dashboard />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <GuestModeProvider>
+        <GuestDataMigrator />
+        <Routes>
+          <Route path="/" element={
+            <PublicRoute>
+              <Landing />
+            </PublicRoute>
+          } />
+          <Route path="/auth" element={
+            <PublicRoute>
+              <Auth />
+            </PublicRoute>
+          } />
+          <Route path="/app" element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path=":dashboardId" element={<Dashboard />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </GuestModeProvider>
     </BrowserRouter>
   )
 }
