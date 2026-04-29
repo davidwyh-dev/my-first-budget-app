@@ -9,9 +9,16 @@ import {
   Sparkles
 } from 'lucide-react';
 import Button from '../components/ui/Button';
+import { useGuestMode } from '../context/GuestModeContext';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { enterGuestMode } = useGuestMode();
+
+  const handleGetStarted = () => {
+    const dashboardId = enterGuestMode();
+    navigate(`/app/${dashboardId}`);
+  };
 
   const features = [
     {
@@ -53,7 +60,7 @@ export default function Landing() {
             <Button variant="ghost" onClick={() => navigate('/auth', { state: { mode: 'signin' } })}>
               Sign In
             </Button>
-            <Button onClick={() => navigate('/auth', { state: { mode: 'signup' } })}>
+            <Button onClick={handleGetStarted}>
               Get Started
             </Button>
           </div>
@@ -181,7 +188,7 @@ export default function Landing() {
                 ))}
               </div>
               <div className="mt-8">
-                <Button size="lg" onClick={() => navigate('/auth')}>
+                <Button size="lg" onClick={handleGetStarted}>
                   Get Started Now
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>

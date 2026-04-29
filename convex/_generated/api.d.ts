@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as categories from "../categories.js";
 import type * as dashboards from "../dashboards.js";
 import type * as http from "../http.js";
+import type * as migration from "../migration.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   categories: typeof categories;
   dashboards: typeof dashboards;
   http: typeof http;
+  migration: typeof migration;
   transactions: typeof transactions;
   users: typeof users;
 }>;
